@@ -1,9 +1,0 @@
-apiVersion: platform.example.org/v1alpha1
-kind: Client
-metadata:
-  name: globex-p
-spec:
-  environment: prod
-  size: large
-  allowIngressFrom: ingress-nginx
-  apiKey: demo-123
