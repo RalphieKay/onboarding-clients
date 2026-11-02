@@ -1,0 +1,67 @@
+name: Validate clients
+
+# Sprawdza kontrakt klienta w pull requeście: ten sam komunikat błędu,
+# który zwraca klaster, tylko zanim zmiana trafi do main.
+on:
+  pull_request:
+    paths:
+      - "**/client.yaml"
+      - ".github/workflows/validate-clients.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout klientów
+        uses: actions/checkout@v4
+
+      - name: Checkout platformy (kontrakt)
+        uses: actions/checkout@v4
+        with:
+          repository: RalphieKay/onboarding-platform
+          path: platform
+
+      - name: Kind
+        uses: helm/kind-action@v1
+
+      - name: Crossplane
+        run: |
+          helm repo add crossplane-stable https://charts.crossplane.io/stable
+          helm repo update
+          helm install crossplane crossplane-stable/crossplane \
+            --namespace crossplane-system --create-namespace \
+            --version 2.4.3 --wait
+
+      - name: Kontrakt (XRD)
+        run: |
+          kubectl apply -f platform/platform/xrd.yaml
+          kubectl wait --for=condition=Established \
+            xrd/clients.platform.example.org --timeout=120s
+          for i in $(seq 1 30); do
+            kubectl get crd clients.platform.example.org && break
+            sleep 2
+          done
+          kubectl wait --for=condition=Established \
+            crd/clients.platform.example.org --timeout=60s
+
+      - name: Dry-run klientów
+        run: |
+          set +e
+          status=0
+          : > result.txt
+          for f in $(find . -path ./platform -prune -o -name client.yaml -print | sort); do
+            echo "== $f" | tee -a result.txt
+            kubectl apply --dry-run=server -f "$f" 2>&1 | tee -a result.txt
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then status=1; fi
+          done
+          {
+            echo '### Kontrakt klientów'
+            echo '```'
+            cat result.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
