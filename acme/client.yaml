@@ -3,7 +3,7 @@ kind: Client
 metadata:
   name: acme
 spec:
-  environment: dev
+  environment: prod
   size: small
   allowIngressFrom: ingress-nginx
   apiKey: demo-123
