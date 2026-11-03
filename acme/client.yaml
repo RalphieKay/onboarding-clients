@@ -1,9 +1,9 @@
 apiVersion: platform.example.org/v1alpha1
 kind: Client
 metadata:
-  name: acme-prod
+  name: acme
 spec:
-  environment: prod 
+  environment: dev 
   size: small
   allowIngressFrom: ingress-nginx
   apiKey: demo-123
