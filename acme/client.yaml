@@ -6,4 +6,3 @@ spec:
   environment: dev 
   size: small
   allowIngressFrom: ingress-nginx
-  apiKey: demo-123
